@@ -5,6 +5,10 @@ on:
     types: [opened, synchronize, reopened]
     branches: [ main ]
 
+  schedule:
+    - cron: '0 0 * * 1'  # Runs every Monday at 00:00 UTC
+
+  workflow_dispatch:  # Allow manual runs for testing
 jobs:
   dependency-tests:
     name: Verify Dependency Updates

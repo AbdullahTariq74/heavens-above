@@ -1,0 +1,37 @@
+name: Docs CI & Deploy
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - 'README.md'
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pages: write
+
+jobs:
+  build-and-publish-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for docs dir
+        id: check
+        run: |
+          if [ -d "./docs" ]; then echo "has_docs=true" >> $GITHUB_OUTPUT; else echo "has_docs=false" >> $GITHUB_OUTPUT; fi
+
+      - name: Build docs (if you use a static generator)
+        if: steps.check.outputs.has_docs == 'true'
+        run: |
+          echo "Assuming docs/ contains ready-to-publish static files."
+
+      - name: Deploy to GitHub Pages
+        if: steps.check.outputs.has_docs == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs

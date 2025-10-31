@@ -1,0 +1,28 @@
+name: Auto Release Notes
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  generate-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate simple release notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const release = context.payload.release;
+            const { owner, repo } = context.repo;
+            const commits = await github.rest.repos.listCommits({
+              owner, repo, per_page: 30
+            });
+            const notes = commits.data.slice(0,10).map(c => `- ${c.commit.message.split("\\n")[0]} (${c.sha.substr(0,7)})`).join("\\n");
+            await github.rest.repos.updateRelease({
+              owner, repo,
+              release_id: release.id,
+              body: `Automated release notes:\\n\\n${notes}`
+            });

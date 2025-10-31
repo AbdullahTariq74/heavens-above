@@ -6,41 +6,62 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-
 jobs:
-  build-and-test:
+  build-test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18]
+    name: Install → Lint → Test → Build
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          node-version: '18'
 
+      # If you have package-lock.json
       - name: Install dependencies
-        run: npm install
-
-      - name: Run lint (if present)
-        run: npm run lint --if-present
-
-      - name: Run tests (if present)
         run: |
-          npm run test --if-present
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
-      - name: Upload test logs & coverage as artifact
+      - name: Lint (if configured)
+        run: |
+          if jq -e '.scripts.lint' package.json >/dev/null 2>&1; then
+            npm run lint
+          else
+            echo "No lint script found; skipping."
+          fi
+
+      - name: Run tests
+        run: |
+          if jq -e '.scripts.test' package.json >/dev/null 2>&1; then
+            npm test --silent
+          else
+            echo "No test script found; skipping."
+          fi
+
+      - name: Build (if present)
+        run: |
+          if jq -e '.scripts.build' package.json >/dev/null 2>&1; then
+            npm run build
+          else
+            echo "No build script found; skipping."
+          fi
+
+      - name: Upload build or test artifacts (optional)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-artifacts
           path: |
-            npm-debug.log
             coverage
-            test-results-*.xml
+            build
+            dist
+            test-results
+            jest-results.xml
+            build.log

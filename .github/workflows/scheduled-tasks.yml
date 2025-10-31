@@ -2,7 +2,7 @@ name: Scheduled Maintenance / Scrape
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # Runs daily at 02:00 UTC
+    - cron: '*/10 * * * *'  # Runs every 5 minutes
   workflow_dispatch:  # Allow manual trigger from Actions tab
 
 permissions:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   daily-run:
-    name: Daily Data Scrape & Commit
+    name: Data Scrape & Commit
     runs-on: ubuntu-latest
 
     steps:
@@ -64,4 +64,3 @@ jobs:
             echo "Changes detected — committing and pushing updates."
             git commit -m "chore: scheduled update (automated)"
             git push origin HEAD:main
-          fi

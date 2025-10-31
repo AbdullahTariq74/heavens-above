@@ -4,7 +4,7 @@
 Scripts for scraping the Heavens Above website. It's based on Node.js. You may need to install some dependency packages using npm.
 
 **警告：不支持 IE。**  
-**WARNING: DO NOT SUPPORT IE.**
+**WARNING: DO NOT SUPPORT IE....**
 
 ## To Use
 

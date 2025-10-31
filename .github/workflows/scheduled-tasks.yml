@@ -64,3 +64,5 @@ jobs:
             echo "Changes detected — committing and pushing updates."
             git commit -m "chore: scheduled update (automated)"
             git push origin HEAD:main
+          fi
+

@@ -23,7 +23,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          # cache: 'npm'
 
       # Install dependencies
       - name: Install dependencies
@@ -40,7 +40,7 @@ jobs:
 
       # Optional: Preview public directory contents
       - name: Preview build output
-        run: ls -la public || echo "⚠️ No public folder found."
+        run: ls -la public || echo "No public folder found."
 
       # Deploy to Vercel (production)
       - name: Deploy to Vercel

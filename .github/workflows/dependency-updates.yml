@@ -15,11 +15,17 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run if PR is from Dependabot or has "dependencies" label
-    if: >
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
       contains(github.event.pull_request.user.login, 'dependabot[bot]') ||
       contains(join(github.event.pull_request.labels.*.name, ','), 'dependencies')
 
     steps:
+      - name: Debug trigger info
+        run: |
+          echo "Workflow triggered by: ${{ github.event_name }}"
+          
       # Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4

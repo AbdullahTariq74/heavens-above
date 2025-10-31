@@ -4,25 +4,56 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write
+
 jobs:
   generate-notes:
+    name: Generate Release Notes
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate simple release notes
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Generate and update release notes
         uses: actions/github-script@v7
         with:
           script: |
             const release = context.payload.release;
             const { owner, repo } = context.repo;
-            const commits = await github.rest.repos.listCommits({
-              owner, repo, per_page: 30
-            });
-            const notes = commits.data.slice(0,10).map(c => `- ${c.commit.message.split("\\n")[0]} (${c.sha.substr(0,7)})`).join("\\n");
-            await github.rest.repos.updateRelease({
-              owner, repo,
-              release_id: release.id,
-              body: `Automated release notes:\\n\\n${notes}`
-            });
+            core.info(`Generating notes for release: ${release.tag_name}`);
+
+            try {
+              const commits = await github.rest.repos.listCommits({
+                owner,
+                repo,
+                per_page: 30
+              });
+
+              if (!commits.data.length) {
+                core.warning('No commits found — skipping release notes.');
+                return;
+              }
+
+              const notes = commits.data
+                .slice(0, 10)
+                .map(c => `- ${c.commit.message.split('\n')[0]} (${c.sha.substr(0, 7)})`)
+                .join('\n');
+
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: release.id,
+                body: ` **Automated Release Notes**\n\n${notes}`
+              });
+
+              core.info(' Successfully updated release notes.');
+            } catch (error) {
+              core.setFailed(`Failed to generate release notes: ${error.message}`);
+            }

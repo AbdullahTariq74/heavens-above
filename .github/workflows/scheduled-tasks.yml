@@ -1,50 +1,67 @@
-name: Scheduled maintenance / scrape
+name: Scheduled Maintenance / Scrape
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # daily at 02:00 UTC
-  workflow_dispatch:
+    - cron: '0 2 * * *'  # Runs daily at 02:00 UTC
+  workflow_dispatch:  # Allow manual trigger from Actions tab
 
 permissions:
   contents: write
 
 jobs:
   daily-run:
+    name: Daily Data Scrape & Commit
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo (persist credentials for push)
+      # Checkout repository with credentials for push
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: true
 
-      - name: Setup Node
+      # Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: Install deps
-        run: npm ci
-
-      - name: Run scheduled script (run.js)
+      # Install dependencies
+      - name: Install dependencies
         run: |
-          if [ -f ./run.js ]; then
-            node run.js
+          if [ -f package-lock.json ]; then
+            npm ci
           else
-            echo "No run.js to execute."
+            npm install
           fi
 
-      - name: Show modified files
-        run: git status --porcelain || true
+      # Run scheduled script (run.js)
+      - name: Execute scheduled script
+        run: |
+          if [ -f ./run.js ]; then
+            echo "Running scheduled scraping task..."
+            node run.js
+          else
+            echo "No run.js file found — skipping execution."
+          fi
 
-      - name: Commit and push generated changes (if any)
+      # Check repository status
+      - name: Show modified files
+        run: |
+          echo "Modified files:"
+          git status --porcelain || true
+
+      # Commit and push changes if any were generated
+      - name: Commit and push changes (if any)
         env:
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: actions@github.com
         run: |
           git add -A
           if git diff --staged --quiet; then
-            echo "No changes to commit."
+            echo "No changes detected — nothing to commit."
           else
+            echo "Changes detected — committing and pushing updates."
             git commit -m "chore: scheduled update (automated)"
             git push origin HEAD:main
           fi

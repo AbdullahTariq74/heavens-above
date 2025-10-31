@@ -1,4 +1,4 @@
-name: Dependency PR checks
+name: Dependency PR Checks
 
 on:
   pull_request:
@@ -6,23 +6,61 @@ on:
     branches: [ main ]
 
 jobs:
-  test-dependency-pr:
+  dependency-tests:
+    name: Verify Dependency Updates
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'dependencies') || contains(github.event.pull_request.user.login, 'dependabot[bot]')
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Use Node
+    # Only run if PR is from Dependabot or has "dependencies" label
+    if: >
+      contains(github.event.pull_request.user.login, 'dependabot[bot]') ||
+      contains(join(github.event.pull_request.labels.*.name, ','), 'dependencies')
+
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Setup Node.js environment
+      - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install
-        run: npm ci
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
-      - name: Run tests
-        run: npm run test --if-present
-
+      # Run lint checks (if defined)
       - name: Run lint
-        run: npm run lint --if-present
+        run: |
+          if jq -e '.scripts.lint' package.json >/dev/null 2>&1; then
+            npm run lint
+          else
+            echo "No lint script found; skipping."
+          fi
+
+      # Run tests (if defined)
+      - name: Run tests
+        run: |
+          if jq -e '.scripts.test' package.json >/dev/null 2>&1; then
+            npm test --silent
+          else
+            echo "No test script found; skipping."
+          fi
+
+      # Upload logs or test artifacts for debugging
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-test-artifacts
+          path: |
+            npm-debug.log
+            coverage
+            test-results

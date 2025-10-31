@@ -2,11 +2,10 @@ name: Docs CI & Deploy
 
 on:
   push:
+    branches: [ main ]
     paths:
       - 'docs/**'
       - 'README.md'
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -14,24 +13,47 @@ permissions:
 
 jobs:
   build-and-publish-docs:
+    name: Build and Deploy Documentation
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      # Checkout the repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check for docs dir
+      # Setup Node.js (optional, if docs use npm-based generator)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # Verify docs directory exists
+      - name: Check for docs directory
         id: check
         run: |
-          if [ -d "./docs" ]; then echo "has_docs=true" >> $GITHUB_OUTPUT; else echo "has_docs=false" >> $GITHUB_OUTPUT; fi
+          if [ -d "./docs" ]; then
+            echo "has_docs=true" >> $GITHUB_OUTPUT
+            echo "Found docs directory."
+          else
+            echo "has_docs=false" >> $GITHUB_OUTPUT
+            echo "No docs directory found. Skipping deployment."
+          fi
 
-      - name: Build docs (if you use a static generator)
+      # (Optional) Build docs if a build script is defined
+      - name: Build documentation
         if: steps.check.outputs.has_docs == 'true'
         run: |
-          echo "Assuming docs/ contains ready-to-publish static files."
+          if jq -e '.scripts.docs' package.json >/dev/null 2>&1; then
+            npm run docs
+          else
+            echo "No docs build script found; assuming static files are ready."
+          fi
 
+      # Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         if: steps.check.outputs.has_docs == 'true'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
+          commit_message: "chore(docs): auto-deploy updated documentation"
